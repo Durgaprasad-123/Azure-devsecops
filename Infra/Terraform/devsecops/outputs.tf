@@ -9,3 +9,4 @@ output "nic_id" {
 output "public_ip" {
   value = module.networking.public_ip
 }
+
