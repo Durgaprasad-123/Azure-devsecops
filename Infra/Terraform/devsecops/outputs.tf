@@ -1,11 +1,11 @@
 output "subnet_id" {
-  value = azurerm_subnet.subnet.id
+ value = module.networking.subnet_id
 }
 
 output "nic_id" {
-  value = azurerm_network_interface.nic.id
+ value = module.networking.nic_id
 }
 
 output "public_ip" {
-  value = azurerm_public_ip.pip.ip_address
+  value = module.networking.public_ip
 }
