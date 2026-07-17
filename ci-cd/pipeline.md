@@ -58,6 +58,7 @@ pipeline {
                 --scan .
                 --format XML
                 --format HTML
+                --nvdApiKey YOUR_API_KEY
                 ''',
                 odcInstallation: 'DependencyCheck'
                     }
