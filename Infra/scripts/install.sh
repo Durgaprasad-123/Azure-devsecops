@@ -7,12 +7,12 @@ echo " Azure DevSecOps Host Installation"
 echo " Ubuntu 24.04 LTS"
 echo "========================================"
 
-echo "[1/8] Updating system..."
+echo "[1/9] Updating system..."
 
 sudo apt update
 sudo apt upgrade -y
 
-echo "[2/8] Installing required packages..."
+echo "[2/9] Installing required packages..."
 
 sudo apt install -y \
 ca-certificates \
@@ -27,7 +27,7 @@ lsb-release \
 software-properties-common \
 openjdk-21-jdk
 
-echo "[3/8] Installing Docker..."
+echo "[3/9] Installing Docker..."
 
 sudo install -m 0755 -d /etc/apt/keyrings
 
@@ -61,7 +61,7 @@ sudo systemctl start docker
 
 sudo usermod -aG docker "$USER"
 
-echo "[4/8] Installing Trivy..."
+echo "[4/9] Installing Trivy..."
 
 curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | \
     gpg --dearmor | \
@@ -73,17 +73,17 @@ sudo tee /etc/apt/sources.list.d/trivy.list >/dev/null
 sudo apt update
 sudo apt install -y trivy
 
-echo "[5/8] Creating project directory..."
+echo "[5/9] Creating project directory..."
 
 sudo mkdir -p /opt/devsecops
 sudo chown -R "$USER":"$USER" /opt/devsecops
 
-echo "[6/8] Setting SonarQube kernel parameter..."
+echo "[6/9] Setting SonarQube kernel parameter..."
 
-echo "vm.max_map_count=524288" | sudo tee /etc/sysctl.d/99-sonarqube.conf >/dev/null
+echo "vm.max_map_count=524299" | sudo tee /etc/sysctl.d/99-sonarqube.conf >/dev/null
 sudo sysctl --system
 
-echo "[7/8] Verifying installations..."
+echo "[7/9] Verifying installations..."
 
 echo ""
 echo "Java:"
@@ -105,9 +105,23 @@ echo ""
 echo "Trivy:"
 trivy --version
 
-echo "[8/8] Installation completed."
+
+echo "[8/9] Installing the defect dojo..."
+git clone https://github.com/DefectDojo/django-DefectDojo.git defectdojo
+
+echo "[9/9] Installation completed."
 
 echo ""
 echo "========================================"
 echo " Host setup completed successfully!"
 echo "========================================"
+
+echo "========================================"
+echo "Please use this steps to start the defect dojo:"
+echo "========================================"
+echo "1. Navigate to the defectdojo directory:"
+echo "   cd defectdojo"
+echo "2. Start the application using Docker Compose:"
+echo "   sudo docker compose up -d"
+echo "3. Access the application in your web browser at:"
+echo "   http://<vm-ip>:8080"
