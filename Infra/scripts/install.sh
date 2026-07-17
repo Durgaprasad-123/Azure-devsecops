@@ -41,7 +41,7 @@ sudo chmod a+r /etc/apt/keyrings/docker.asc
 cat <<EOF | sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
-Suites: noble
+Suites: jammy
 Components: stable
 Architectures: amd64
 Signed-By: /etc/apt/keyrings/docker.asc
