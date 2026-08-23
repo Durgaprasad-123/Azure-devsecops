@@ -10,12 +10,12 @@ pipeline {
         IMAGE_TAG                 = "${env.BUILD_NUMBER}"
         FULL_IMAGE               = "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-        AKS_RESOURCE_GROUP       = 'CHANGE-ME-resource-group'
-        AKS_CLUSTER_NAME         = 'CHANGE-ME-aks-cluster'
+        AKS_RESOURCE_GROUP       = 'rg-devsecops'
+        AKS_CLUSTER_NAME         = 'aksmvgxg'
         K8S_NAMESPACE             = 'default'
-        K8S_DEPLOYMENT             = 'juiceshop'
-        K8S_CONTAINER             = 'juiceshop'
-        K8S_SERVICE               = 'juiceshop'
+        K8S_DEPLOYMENT             = 'juice-shop'
+        K8S_CONTAINER             = 'juice-shop'
+        K8S_SERVICE               = 'juice-shop'
 
         DEFECTDOJO_URL           = 'http://20.219.29.240:8080/'
         DEFECTDOJO_PRODUCT_NAME = 'Owasp-Juiceshop'
