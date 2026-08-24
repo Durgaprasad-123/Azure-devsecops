@@ -90,10 +90,6 @@ pipeline {
             }
         }
 
-        // Trivy now runs NATIVELY inside the Jenkins container (baked into
-        // the image via Dockerfile.jenkins) — no docker socket, no volume
-        // path mismatch. Straightforward shell calls, output lands directly
-        // in the workspace.
         stage('Trivy Filesystem Scan') {
             steps {
                 dir('app') {
@@ -108,10 +104,6 @@ pipeline {
             }
         }
 
-        // docker build is safe via the socket even though Jenkins runs in a
-        // container: the CLI tars up the local build context and streams it
-        // to the daemon over the socket, so it never needs the host to see
-        // this path on disk.
         stage('Build Docker Image') {
             steps {
                 dir('app') {
@@ -177,13 +169,6 @@ pipeline {
             }
         }
 
-        // ZAP isn't baked into the image, so it still runs as a SIBLING
-        // container via the docker socket. Because Jenkins' workspace lives
-        // on the jenkins_home NAMED VOLUME (not a host bind mount), we must
-        // mount that same named volume into the sibling container at the
-        // identical path — a bare `-v $(pwd):...` would resolve against the
-        // host filesystem, which does not have this path, and would silently
-        // create/write to the wrong place.
         stage('DAST - OWASP ZAP Scan') {
             steps {
                 script {
