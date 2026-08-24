@@ -144,7 +144,6 @@ pipeline {
             }
         }
 
-        // az cli now runs natively inside the Jenkins container too.
         stage('Connect to AKS') {
             steps {
                 sh """
