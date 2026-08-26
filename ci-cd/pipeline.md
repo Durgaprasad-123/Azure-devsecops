@@ -10,8 +10,8 @@ pipeline {
         IMAGE_TAG                 = "${env.BUILD_NUMBER}"
         FULL_IMAGE               = "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-        AKS_RESOURCE_GROUP       = 'rg-devsecops'
-        AKS_CLUSTER_NAME         = 'aksmvgxg'
+        AKS_RESOURCE_GROUP       = '<resource-group-name>'
+        AKS_CLUSTER_NAME         = '<cluster-name>'
         K8S_NAMESPACE             = 'default'
         K8S_DEPLOYMENT             = 'juice-shop'
         K8S_CONTAINER             = 'juice-shop'
