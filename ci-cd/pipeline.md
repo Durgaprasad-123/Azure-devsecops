@@ -4,8 +4,8 @@ pipeline {
     environment {
         AZURE_CRED_ID           = 'Azure-credential-id'
 
-        ACR_NAME                = 'acrnpf1y'
-        ACR_LOGIN_SERVER        = 'acrnpf1y.azurecr.io'
+        ACR_NAME                = '<container-name>'
+        ACR_LOGIN_SERVER        = '<container-name>.azurecr.io'
         IMAGE_NAME               = 'juiceshop'
         IMAGE_TAG                 = "${env.BUILD_NUMBER}"
         FULL_IMAGE               = "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -17,7 +17,7 @@ pipeline {
         K8S_CONTAINER             = 'juice-shop'
         K8S_SERVICE               = 'juice-shop'
 
-        DEFECTDOJO_URL           = 'http://20.219.29.240:8080/'
+        DEFECTDOJO_URL           = 'http://<vm_ip>:8080/'
         DEFECTDOJO_PRODUCT_NAME = 'Owasp-Juiceshop'
         DEFECTDOJO_ENGAGEMENT   = 'CI-Pipeline'
     }
