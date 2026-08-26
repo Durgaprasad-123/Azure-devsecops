@@ -4,20 +4,21 @@ pipeline {
     environment {
         AZURE_CRED_ID           = 'Azure-credential-id'
 
-        ACR_NAME                = '<container-name>'
-        ACR_LOGIN_SERVER        = '<container-name>.azurecr.io'
+        ACR_NAME                = 'acrbqssk'
+        ACR_LOGIN_SERVER        = 'acrbqssk.azurecr.io'
         IMAGE_NAME               = 'juiceshop'
         IMAGE_TAG                 = "${env.BUILD_NUMBER}"
         FULL_IMAGE               = "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-        AKS_RESOURCE_GROUP       = '<resource-group-name>'
-        AKS_CLUSTER_NAME         = '<cluster-name>'
+        AKS_RESOURCE_GROUP       = 'rg-devsecops'
+        AKS_CLUSTER_NAME         = 'aksjdchq'
         K8S_NAMESPACE             = 'default'
         K8S_DEPLOYMENT             = 'juice-shop'
         K8S_CONTAINER             = 'juice-shop'
         K8S_SERVICE               = 'juice-shop'
 
-        DEFECTDOJO_URL           = 'http://<vm_ip>:8080/'
+        DEFECTDOJO_URL           = 'http://20.193.227.243:8080'
+        DEFECTDOJO_PRODUCT_TYPE = 'DevSecOps'
         DEFECTDOJO_PRODUCT_NAME = 'Owasp-Juiceshop'
         DEFECTDOJO_ENGAGEMENT   = 'CI-Pipeline'
     }
@@ -43,7 +44,7 @@ pipeline {
                             withSonarQubeEnv('SonarQube') {
                                 sh """
                                     ${scannerHome}/bin/sonar-scanner \
-                                      -Dsonar.projectKey=Owasp-juiceshop \
+                                      -Dsonar.projectKey=owasp-juiceshop \
                                       -Dsonar.sources=. \
                                       -Dsonar.sourceEncoding=UTF-8 \
                                       -Dsonar.token=\$SONAR_TOKEN
@@ -178,16 +179,24 @@ pipeline {
                         """,
                         returnStdout: true
                     ).trim()
+                    echo "ZAP Target URL: ${env.TARGET_URL}"
                 }
-                sh """
+                sh '''
                     mkdir -p zap-report
+                    chmod 777 zap-report
+                    echo "Current directory:"
+                    pwd
+                    echo "Target URL: $TARGET_URL"
                     docker run --rm \
-                      -v jenkins_home:/var/jenkins_home \
+                      -v "$(pwd)/zap-report:/zap/wrk:rw" \
                       -w ${WORKSPACE}/zap-report \
                       -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-                      -t ${env.TARGET_URL} \
+                      -t $TARGET_URL \
                       -r zap-report.html -x zap-report.xml -J zap-report.json || true
-                """
+                      
+                      echo "======zap-file======"
+                      ls -lah zap-report/
+                '''
                 archiveArtifacts artifacts: 'zap-report/*', allowEmptyArchive: true
             }
         }
@@ -206,6 +215,7 @@ pipeline {
                                   -F "scan_type=Dependency Check Scan" \
                                   -F "file=@dependency-check-report.xml" \
                                   -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
+                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
                                   -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                                   -F "auto_create_context=true"
 
@@ -214,6 +224,7 @@ pipeline {
                                   -F "scan_type=Trivy Scan" \
                                   -F "file=@trivy-fs-report.json" \
                                   -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
+                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
                                   -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                                   -F "auto_create_context=true"
                             """
@@ -225,6 +236,7 @@ pipeline {
                               -F "scan_type=Trivy Scan" \
                               -F "file=@trivy-image-report.json" \
                               -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
+                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
                               -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                               -F "auto_create_context=true"
 
@@ -233,6 +245,7 @@ pipeline {
                               -F "scan_type=ZAP Scan" \
                               -F "file=@zap-report/zap-report.xml" \
                               -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
+                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
                               -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                               -F "auto_create_context=true"
                         """
