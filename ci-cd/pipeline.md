@@ -17,10 +17,13 @@ pipeline {
         K8S_CONTAINER             = 'juice-shop'
         K8S_SERVICE               = 'juice-shop'
 
-        DEFECTDOJO_URL           = 'http://20.193.227.243:8080'
+        DEFECTDOJO_URL           = '<vm-ip>:8080'
         DEFECTDOJO_PRODUCT_TYPE = 'DevSecOps'
         DEFECTDOJO_PRODUCT_NAME = 'Owasp-Juiceshop'
         DEFECTDOJO_ENGAGEMENT   = 'CI-Pipeline'
+        
+        SONAR_HOST_URL           = '<vm-ip>:9000/sonarqube'
+        SONAR_PROJECT_KEY        = 'owasp-juiceshop'
     }
 
     stages {
@@ -61,6 +64,33 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
+            }
+        }
+
+        stage('Generate SonarQube Report') {
+            steps {
+                dir('app') {
+                    script {
+                        azureKeyVault(
+                            credentialID: env.AZURE_CRED_ID,
+                            secrets: [[envVariable: 'SONAR_TOKEN', name: 'sonarqube', secretType: 'Secret']]
+                        ) {
+                        
+                            sh """
+                                curl -sv --max-time 20 -u "\$SONAR_TOKEN:" \
+                                  -w "\\nHTTP_STATUS=%{http_code}\\n" \
+                                  "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=500" \
+                                  -o sonarqube_results.json
+
+                                echo "SonarQube report size:"
+                                ls -lah sonarqube_results.json
+                                echo "First 200 chars of response:"
+                                head -c 200 sonarqube_results.json
+                            """
+                        }
+                    }
+                }
+                archiveArtifacts artifacts: 'app/sonarqube_results.json', allowEmptyArchive: true
             }
         }
 
@@ -183,20 +213,37 @@ pipeline {
                 }
                 sh '''
                     mkdir -p zap-report
-                    chmod 777 zap-report
                     echo "Current directory:"
                     pwd
                     echo "Target URL: $TARGET_URL"
-                    docker run --rm \
-                      -v "$(pwd)/zap-report:/zap/wrk:rw" \
-                      -w ${WORKSPACE}/zap-report \
-                      -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-                      -t $TARGET_URL \
-                      -r zap-report.html -x zap-report.xml -J zap-report.json || true
-                      
-                      echo "======zap-file======"
-                      ls -lah zap-report/
+
+                    ZAP_VOLUME="zap-vol-${BUILD_NUMBER}"
+                    ZAP_CONTAINER="zap-run-${BUILD_NUMBER}"
+
+                    docker volume create "$ZAP_VOLUME"
+
+                    docker run --user root \
+                        --name "$ZAP_CONTAINER" \
+                        -v "$ZAP_VOLUME:/zap/wrk:rw" \
+                        ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                        -t $TARGET_URL \
+                        -r zap-report.html -x zap-report.xml -J zap-report.json || true
+
+                    docker cp "$ZAP_CONTAINER:/zap/wrk/." ./zap-report/
+
+                    docker rm -f "$ZAP_CONTAINER" || true
+                    docker volume rm "$ZAP_VOLUME" || true
+
+                    echo "======zap-file======"
+                    ls -lah zap-report/
                 '''
+                sh '''
+                    if [ ! -s zap-report/zap-report.xml ]; then
+                        echo "ERROR: zap-report.xml was not generated. Check the ZAP container logs above."
+                        exit 1
+                    fi
+                '''
+
                 archiveArtifacts artifacts: 'zap-report/*', allowEmptyArchive: true
             }
         }
@@ -215,7 +262,7 @@ pipeline {
                                   -F "scan_type=Dependency Check Scan" \
                                   -F "file=@dependency-check-report.xml" \
                                   -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
-                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
+                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}" \
                                   -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                                   -F "auto_create_context=true"
 
@@ -224,7 +271,19 @@ pipeline {
                                   -F "scan_type=Trivy Scan" \
                                   -F "file=@trivy-fs-report.json" \
                                   -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
-                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
+                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}" \
+                                  -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
+                                  -F "auto_create_context=true"
+
+                                echo "SonarQube report present?"
+                                ls -lah sonarqube_results.json
+
+                                curl -s -X POST "${DEFECTDOJO_URL}/api/v2/import-scan/" \
+                                  -H "Authorization: Token \$DEFECTDOJO_API_KEY" \
+                                  -F "scan_type=SonarQube Scan" \
+                                  -F "file=@sonarqube_results.json" \
+                                  -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
+                                  -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}" \
                                   -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                                   -F "auto_create_context=true"
                             """
@@ -236,16 +295,19 @@ pipeline {
                               -F "scan_type=Trivy Scan" \
                               -F "file=@trivy-image-report.json" \
                               -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
-                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
+                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}" \
                               -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                               -F "auto_create_context=true"
+
+                            echo "ZAP report present at publish time?"
+                            ls -lah "\${WORKSPACE}/zap-report/"
 
                             curl -s -X POST "${DEFECTDOJO_URL}/api/v2/import-scan/" \
                               -H "Authorization: Token \$DEFECTDOJO_API_KEY" \
                               -F "scan_type=ZAP Scan" \
-                              -F "file=@zap-report/zap-report.xml" \
+                              -F "file=@\${WORKSPACE}/zap-report/zap-report.xml" \
                               -F "product_name=${DEFECTDOJO_PRODUCT_NAME}" \
-                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}"
+                              -F "product_type_name=${DEFECTDOJO_PRODUCT_TYPE}" \
                               -F "engagement_name=${DEFECTDOJO_ENGAGEMENT}" \
                               -F "auto_create_context=true"
                         """
