@@ -4,14 +4,14 @@ pipeline {
     environment {
         AZURE_CRED_ID           = 'Azure-credential-id'
 
-        ACR_NAME                = 'acrbqssk'
-        ACR_LOGIN_SERVER        = 'acrbqssk.azurecr.io'
+        ACR_NAME                = '<registry-name>'
+        ACR_LOGIN_SERVER        = '<acr_name>.azurecr.io'
         IMAGE_NAME               = 'juiceshop'
         IMAGE_TAG                 = "${env.BUILD_NUMBER}"
         FULL_IMAGE               = "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-        AKS_RESOURCE_GROUP       = 'rg-devsecops'
-        AKS_CLUSTER_NAME         = 'aksjdchq'
+        AKS_RESOURCE_GROUP       = '<resource-group-name>'
+        AKS_CLUSTER_NAME         = '<cluster-name>'
         K8S_NAMESPACE             = 'default'
         K8S_DEPLOYMENT             = 'juice-shop'
         K8S_CONTAINER             = 'juice-shop'
